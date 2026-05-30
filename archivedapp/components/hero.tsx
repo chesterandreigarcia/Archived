@@ -10,14 +10,6 @@ const slides = [
     "/hero/video3.mp4",
 ];
 
-// Poster images to show in thumbnails — always visible, no video decode needed
-// Add actual poster jpgs at these paths, or swap to any static image
-const POSTERS = [
-    "/hero/poster1.jpg",
-    "/hero/poster2.jpg",
-    "/hero/poster3.jpg",
-];
-
 export default function Hero() {
     const [current, setCurrent] = useState(0);
     const [loaded, setLoaded] = useState<boolean[]>(slides.map(() => false));
@@ -25,6 +17,7 @@ export default function Hero() {
     const scrollArrowRef = useRef<HTMLButtonElement | null>(null);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
+    // Mark a video as loaded
     const handleCanPlay = (i: number) => {
         setLoaded((prev) => {
             const next = [...prev];
@@ -41,13 +34,14 @@ export default function Hero() {
         return () => clearInterval(interval);
     }, []);
 
-    // Play current, pause others
+    // Play the current video, pause others
     useEffect(() => {
         videoRefs.current.forEach((vid, i) => {
             if (!vid) return;
             if (i === current) {
+                // Reset to beginning and play
                 vid.currentTime = 0;
-                vid.play().catch(() => { });
+                vid.play().catch(() => {});
             } else {
                 vid.pause();
             }
@@ -88,17 +82,24 @@ export default function Hero() {
             <div ref={trackRef} className="flex w-full h-full">
                 {slides.map((src, i) => (
                     <div key={i} className="relative w-full h-full flex-shrink-0">
+
+                        {/* Low-res blur placeholder shown until video is ready */}
                         {!loaded[i] && (
                             <div className="absolute inset-0 bg-black/80 animate-pulse" />
                         )}
+
                         <video
                             ref={(el) => { videoRefs.current[i] = el; }}
                             src={src}
+                            // Only autoplay the first slide; others are triggered by useEffect
                             autoPlay={i === 0}
                             muted
                             loop
                             playsInline
+                            // preload="auto" tells the browser to fetch the video immediately
                             preload="auto"
+                            // poster gives a thumbnail to show before the video loads (optional — add a jpg per video)
+                            // poster={`/hero/poster${i + 1}.jpg`}
                             onCanPlay={() => handleCanPlay(i)}
                             className="w-full h-full object-cover"
                             style={{
@@ -113,7 +114,7 @@ export default function Hero() {
             {/* Dark gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none" />
 
-            {/* Hero text */}
+            {/* Hero text — centered */}
             <div className="absolute bottom-36 md:bottom-44 left-1/2 -translate-x-1/2 z-10 w-full px-6 flex flex-col items-center text-center">
                 <h1
                     className="hero-headline text-white w-full"
@@ -128,78 +129,27 @@ export default function Hero() {
                 </p>
             </div>
 
-            {/* Thumbnail strip */}
-            <div className="absolute bottom-8 md:bottom-10 left-1/2 -translate-x-1/2 flex gap-3 md:gap-4 z-10">
-                {slides.map((src, i) => {
-                    const isActive = i === current;
-                    return (
-                        <button
-                            key={i}
-                            onClick={() => setCurrent(i)}
-                            aria-label={`Go to slide ${i + 1}`}
-                            style={{
-                                // Fixed size — no scale transforms that can cause layout shifts on mobile
-                                width: "52px",
-                                height: "52px",
-                                borderRadius: "6px",
-                                overflow: "hidden",
-                                flexShrink: 0,
-                                padding: 0,
-                                cursor: "pointer",
-                                position: "relative",
-                                // Always a visible border — active is white, inactive is dim white
-                                border: isActive
-                                    ? "2px solid rgba(255,255,255,1)"
-                                    : "2px solid rgba(255,255,255,0.35)",
-                                // Box shadow for active instead of scale (scale causes invisible thumbnails on some mobile browsers)
-                                boxShadow: isActive
-                                    ? "0 0 0 1px rgba(255,255,255,0.5), 0 4px 12px rgba(0,0,0,0.6)"
-                                    : "none",
-                                transition: "border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease",
-                                // Inactive is dimmed but always visible — never fully transparent
-                                opacity: isActive ? 1 : 0.55,
-                                background: "#111",
-                            }}
-                        >
-                            {/*
-                             * Use a static <img> poster instead of <video> for thumbnails.
-                             * Video thumbnails are unreliable on mobile — the browser often
-                             * refuses to decode a frame, leaving a black box.
-                             * If you don't have poster jpgs yet, remove the <img> and
-                             * uncomment the <video> below as a fallback.
-                             */}
-                            <img
-                                src={POSTERS[i]}
-                                alt={`Slide ${i + 1}`}
-                                loading="eager"
-                                decoding="async"
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit: "cover",
-                                    display: "block",
-                                }}
-                                // If the poster image fails (file not found), fall back to
-                                // a video element so something still renders
-                                onError={(e) => {
-                                    const img = e.currentTarget;
-                                    const parent = img.parentElement;
-                                    if (!parent) return;
-                                    img.style.display = "none";
-                                    const vid = document.createElement("video");
-                                    vid.src = src;
-                                    vid.muted = true;
-                                    vid.playsInline = true;
-                                    vid.preload = "metadata";
-                                    vid.style.cssText = "width:100%;height:100%;object-fit:cover;display:block;";
-                                    parent.appendChild(vid);
-                                }}
-                            />
-
-                            {/* Active indicator dot at bottom */}
-                        </button>
-                    );
-                })}
+            {/* Thumbnail strip — bottom center */}
+            <div className="absolute bottom-8 md:bottom-10 left-1/2 -translate-x-1/2 flex gap-3 md:gap-5 z-10">
+                {slides.map((src, i) => (
+                    <div
+                        key={i}
+                        onClick={() => setCurrent(i)}
+                        className={`cursor-pointer overflow-hidden rounded-lg border-2 transition-all duration-300
+                        ${i === current
+                                ? "scale-110 border-white shadow-lg"
+                                : "opacity-50 border-white/30 hover:opacity-70"
+                            }`}
+                    >
+                        <video
+                            src={src}
+                            muted
+                            playsInline
+                            preload="metadata"
+                            className="md:w-14 md:h-14 w-12 h-12 object-cover"
+                        />
+                    </div>
+                ))}
             </div>
 
             {/* Scroll down arrow */}
@@ -230,6 +180,7 @@ export default function Hero() {
                     />
                 </svg>
             </button>
+
         </div>
     );
 }
