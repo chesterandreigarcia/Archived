@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Barlow } from "next/font/google";
+import Navbar from "@/components/navbar";
 import "./globals.css";
 
 const bebasNeue = Bebas_Neue({
@@ -30,6 +31,7 @@ export default function RootLayout({
       className={`${bebasNeue.variable} ${barlow.variable} h-full antialiased`}
     >
       <body className="min-h-screen flex flex-col">
+        <Navbar />
         <main className="flex-1">{children}</main>
       </body>
     </html>
